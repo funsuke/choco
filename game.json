@@ -1,0 +1,73 @@
+{
+	"width": 1280,
+	"height": 720,
+	"fps": 30,
+	"main": "./script/_bootstrap.js",
+	"assets": {
+		"_bootstrap": {
+			"type": "script",
+			"path": "script/_bootstrap.js",
+			"global": true
+		},
+		"main": {
+			"type": "script",
+			"path": "script/main.js",
+			"global": true
+		},
+		"parameterObject": {
+			"type": "script",
+			"path": "script/parameterObject.js",
+			"global": true
+		},
+		"block": {
+			"type": "image",
+			"path": "image/block.png",
+			"width": 672,
+			"height": 91
+		},
+		"choco": {
+			"type": "image",
+			"path": "image/choco.png",
+			"width": 300,
+			"height": 300
+		},
+		"bg": {
+			"type": "image",
+			"path": "image/bg.png",
+			"width": 1280,
+			"height": 720
+		},
+		"area": {
+			"type": "image",
+			"path": "image/area.png",
+			"width": 1280,
+			"height": 720
+		},
+		"CBlock": {
+			"type": "script",
+			"path": "script/CBlock.js",
+			"global": true
+		},
+		"CRandom": {
+			"type": "script",
+			"path": "script/CRandom.js",
+			"global": true
+		},
+		"blk_back": {
+			"type": "image",
+			"path": "image/blk_back.png",
+			"width": 692,
+			"height": 559
+		}
+	},
+	"moduleMainScripts": {},
+	"environment": {
+		"sandbox-runtime": "3",
+		"niconico": {
+			"supportedModes": [
+				"ranking"
+			]
+		}
+	},
+	"globalScripts": []
+}
