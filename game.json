@@ -60,7 +60,9 @@
 			"height": 559
 		}
 	},
-	"moduleMainScripts": {},
+	"moduleMainScripts": {
+		"@akashic-extension/akashic-timeline": "node_modules/@akashic-extension/akashic-timeline/lib/index.js"
+	},
 	"environment": {
 		"sandbox-runtime": "3",
 		"niconico": {
@@ -69,5 +71,11 @@
 			]
 		}
 	},
-	"globalScripts": []
+	"globalScripts": [
+		"node_modules/@akashic-extension/akashic-timeline/lib/ActionType.js",
+		"node_modules/@akashic-extension/akashic-timeline/lib/Easing.js",
+		"node_modules/@akashic-extension/akashic-timeline/lib/Timeline.js",
+		"node_modules/@akashic-extension/akashic-timeline/lib/Tween.js",
+		"node_modules/@akashic-extension/akashic-timeline/lib/index.js"
+	]
 }

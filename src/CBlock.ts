@@ -1,5 +1,7 @@
 import { ASPECT_RATIO, G_GAME_PARAMETER, debugLog } from "./main";
 import { Random } from "./CRandom";
+import { Easing, Timeline } from "@akashic-extension/akashic-timeline";
+import { SpriteFactory } from "@akashic/akashic-engine";
 
 /**
  * ブロックタイプ型
@@ -41,6 +43,12 @@ enum BlockMoveDir {
 	up = 3,
 };
 
+interface Target {
+	x: number,
+	y: number,
+	no: number,
+};
+
 /**
  * ブロッククラス
  * @class
@@ -75,7 +83,7 @@ export class Block {
 	// ランダムクラス
 	private rnd: Random;
 	// フラグ類
-	private isMoving = false;
+	private isSwapping = false;
 
 	/**
 	 * コンストラクタ(imageIDの設定など)
@@ -109,14 +117,22 @@ export class Block {
 		this.initArray();
 	}
 
+	private getX(idx: number): number {
+		return idx % this.NUM_X;
+	}
+
+	private getY(idx: number): number {
+		return Math.floor(idx / this.NUM_X);
+	}
+
 	/**
 	 * 数値配列の初期化
 	 */
 	private initArray(): void {
 		// ３つ繋がらないようにランダム値で初期化
 		for (let i = 0; i < this.ARRAY_SIZE; i++) {
-			const x: number = i % this.NUM_X;
-			const y: number = Math.floor(i / this.NUM_X);
+			const x: number = this.getX(i);
+			const y: number = this.getY(i);
 			const dx: number = 1;
 			const dy: number = this.NUM_X;
 			// 下方向と左方向の要素(ブロックタイプ)を取得
@@ -145,14 +161,11 @@ export class Block {
 		}
 	}
 
-	public setBlockEntity(scene: g.Scene): void {
+	public appendBlock(scene: g.Scene): void {
 		debugLog("setBlockEntity_in");
-		// ブロックの表示
+		// ブロックの表示 yを降順で表示 0は一番下に表示
 		for (let i = 0; i < this.NUM_X * (this.NUM_Y + 1); i++) {
-			const row: number = Math.floor(i / this.NUM_X);
-			const x: number = i % this.NUM_X;
-			const y: number = 7 + row;
-			const idx: number = 56 - this.NUM_X * row + x;
+			const idx: number = this.NUM_X * (this.NUM_Y - this.getY(i)) + this.getX(i);
 			debugLog("idx=" + idx);
 			this.entBlock[idx] = this.createBlock(scene, idx);
 			this.addOnPointMoveEvent(idx);
@@ -167,8 +180,8 @@ export class Block {
 	}
 
 	private createBlock(scene: g.Scene, idx: number): g.FrameSprite {
-		const x: number = idx % this.NUM_X;
-		const y: number = (this.NUM_Y - 1) - Math.floor(idx / this.NUM_X);
+		const x: number = this.getX(idx);
+		const y: number = (this.NUM_Y - 1) - this.getY(idx);
 		return new g.FrameSprite({
 			scene: scene,
 			src: this.imgBlock,
@@ -186,25 +199,25 @@ export class Block {
 		// debugLog("addOnPointMoveEvent_in");
 		this.entBlock[idx].onPointMove.add((ev) => {
 			// debugLog(`entBlock.onPointMove_in idx=${idx}`);
-			if (!this.isMoving && this.entBlock[idx].frameNumber != 0) {
+			if (!this.isSwapping && this.entBlock[idx].frameNumber != 0) {
 				// 操作
 				this.inputBlock(ev, idx);
 			}
 		});
 	};
 
-	private inputBlock(ev: g.PointMoveEvent, idx: number) {
+	private inputBlock(ev: g.PointMoveEvent, idx: number): void {
 		debugLog("inputBlock_in idx=" + idx);
 		debugLog(`startDelta=(${ev.startDelta.x},${ev.startDelta.y})`);
 		if (Math.abs(ev.startDelta.x) >= this.INPUT_DELTA || Math.abs(ev.startDelta.y) >= this.INPUT_DELTA) {
-			const x = idx % this.NUM_X;
-			const y = Math.floor(idx / this.NUM_X);
+			const x: number = this.getX(idx);
+			const y: number = this.getY(idx);
 			if (ev.startDelta.x >= this.INPUT_DELTA) {
 				debugLog("右っぽい", "x=" + x, "y=" + y);
 				// 右
 				if (x < this.NUM_X - 1 && y < this.NUM_Y) {
 					debugLog("右");
-					this.isMoving = true;
+					this.isSwapping = true;
 					this.blockMove(idx, BlockMoveDir.right)
 				}
 			} else if (ev.startDelta.y >= this.INPUT_DELTA) {
@@ -212,7 +225,7 @@ export class Block {
 				// 下
 				if (y > 0 && y < this.NUM_Y) {
 					debugLog("下");
-					this.isMoving = true;
+					this.isSwapping = true;
 					this.blockMove(idx, BlockMoveDir.down)
 				}
 			} else if (ev.startDelta.x <= -this.INPUT_DELTA) {
@@ -220,7 +233,7 @@ export class Block {
 				// 左
 				if (x > 0 && y < this.NUM_Y) {
 					debugLog("左");
-					this.isMoving = true;
+					this.isSwapping = true;
 					this.blockMove(idx, BlockMoveDir.left)
 				}
 			} else if (ev.startDelta.y <= -this.INPUT_DELTA) {
@@ -228,18 +241,19 @@ export class Block {
 				// 上
 				if (y < this.NUM_Y - 1) {
 					debugLog("上");
-					this.isMoving = true;
+					this.isSwapping = true;
 					this.blockMove(idx, BlockMoveDir.up)
 				}
 			} else {
 				debugLog("動けませんでした");
 				debugLog(`dlt=>(${ev.startDelta.x},${ev.startDelta.y}),idx=>(${idx})`);
+				return;
 			}
-			if (this.isMoving) {
-				this.scene.setTimeout(() => {
-					this.isMoving = false;
-				}, 300);
-			}
+			// if (this.isSwapping) {
+			// 	this.scene.setTimeout(() => {
+			// 		this.isSwapping = false;
+			// 	}, 300);
+			// }
 		}
 	}
 
@@ -263,12 +277,58 @@ export class Block {
 				return;
 		}
 		if (di) {
-			const fNo: number = this.entBlock[idx].frameNumber;
-			this.entBlock[idx].frameNumber = this.entBlock[idx + di].frameNumber;
-			this.entBlock[idx].modified();
-			this.entBlock[idx + di].frameNumber = fNo;
-			this.entBlock[idx + di].modified();
+			const srcEnt: g.FrameSprite = this.entBlock[idx];
+			const dstEnt: g.FrameSprite = this.entBlock[idx + di];
+			const target: Target = {
+				x: srcEnt.x, y: srcEnt.y, no: this.entBlock[idx].frameNumber
+			};
+			const dstTarget: Target = {
+				x: dstEnt.x, y: dstEnt.y, no: this.entBlock[idx + di].frameNumber
+			};
+			this.createSwapAnime(idx, idx + di, true);
+			this.createSwapAnime(idx + di, idx);
+			[this.arrBlock[idx], this.arrBlock[idx + di]] = [this.arrBlock[idx + di], this.arrBlock[idx]];
 		}
+	}
+
+	private createSwapAnime(sIdx: number, dIdx: number, isSrc: boolean = false): void {
+		const src: g.FrameSprite = this.entBlock[sIdx];
+		const dstX: number = this.getX(dIdx);
+		const dstY: number = (this.NUM_Y - 1) - this.getY(dIdx);
+		const dst: Target = {
+			x: this.MARGIN_LT * dstX - 8,
+			y: this.MARGIN_TP * dstY - 4,
+			no: this.entBlock[dIdx].frameNumber
+		};
+		const preX: number = src.x;
+		const preY: number = src.y;
+		// タイムライン
+		const tl = new Timeline(this.scene);
+		// 特徴的(なし) easeInCirc easeInCubic easeInExpo
+		// 特徴的(あり) easeInOutBack  easeOutBounce
+		// まあまあ良い easeInOutCirc easeInOutCubic easeInOutExpo easeInOutSine easeInSine
+		//             easeOutCirc easeOutCubic easeOutQuad easeOutQuart easeOutQuint
+		// 少しもたつき easeInOutQuad easeInQuad easeOutSine
+		// きびきび easeInOutQuint
+		// もたつき easeInQuart easeInQuint linear
+		tl.create(src)
+			.call(() => {
+				src.x = dst.x;
+				src.y = dst.y;
+				src.frameNumber = dst.no;
+				src.modified();
+			})
+			.moveTo(preX, preY, 333, Easing.easeInOutCirc)
+			.call(() => {
+				this.isSwapping = false;
+				// クリックしたブロックだけの処理
+				if (isSrc) {
+					debugLog(this.arrBlock);
+					// 消す処理
+					if (this.checkEraseBlcock(sIdx, dIdx)) {
+					}
+				}
+			});
 	}
 
 	/**

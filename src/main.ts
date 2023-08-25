@@ -88,40 +88,8 @@ export function main(param: GameMainParameterObject): void {
 		const block: Block = new Block(scene, "block", "blk_back");
 		// ブロック背景の追加
 		block.appendBack(scene);
-
-		// debugLog("ブロック配列初期値設定_開始");
-		// for (let y = arrBlock[0].length - 1; y >= 0; y--) {
-		// 	for (let x = 0; x < arrBlock.length; x++) {
-		// 		let left1: typBlockType = typBlockType.none;
-		// 		let left2: typBlockType = typBlockType.none;
-		// 		let down1: typBlockType = typBlockType.none;
-		// 		let down2: typBlockType = typBlockType.none;
-		// 		let newBlock: typBlockType = typBlockType.none;
-		// 		// 範囲内のブロックであれば左1,2と下1,2を取得
-		// 		if (x > 1) {
-		// 			left1 = arrBlock[x - 1][y];
-		// 			left2 = arrBlock[x - 2][y];
-		// 		}
-		// 		if (y < arrBlock[0].length - 2) {
-		// 			down1 = arrBlock[x][y + 1];
-		// 			down2 = arrBlock[x][y + 2];
-		// 		}
-		// 		// 新しいブロックの設定
-		// 		newBlock = Random.randRange(1, typBlockType.all);
-		// 		debugLog(newBlock);
-		// 		if (left1 === left2 || down1 === down2) {
-		// 			while (newBlock === left2 || newBlock === down2) {
-		// 				newBlock = Random.randRange(1, typBlockType.all);
-		// 				debugLog(newBlock);
-		// 			}
-		// 		}
-		// 		arrBlock[x][y] = newBlock;
-		// 	}
-		// }
-		// debugLog("ブロック配列初期値設定_終了");
-
 		// ブロックの表示
-		block.setBlockEntity(scene);
+		block.appendBlock(scene);
 
 		// ショコの生成 500x500
 		const choco = new g.Sprite({
@@ -131,22 +99,6 @@ export function main(param: GameMainParameterObject): void {
 			y: g.game.height - 500,
 		});
 		scene.append(choco);
-
-		// test
-		// const rect = new g.FilledRect({
-		// 	scene: scene,
-		// 	cssColor: "red",
-		// 	width: 128,
-		// 	height: 128,
-		// 	x: 700,
-		// 	y: 300,
-		// 	touchable: true,
-		// });
-		// rect.onPointDown.add((ev) => {
-		// 	debugLog("testOnPointDown");
-		// 	debugLog(`(ev) => (${ev.point.x},${ev.point.y})`);
-		// });
-		// scene.append(rect);
 
 		// フォントの生成
 		const font = new g.DynamicFont({
@@ -176,12 +128,12 @@ export function main(param: GameMainParameterObject): void {
 		});
 		scene.append(timeLabel);
 
-		// ボタン等表示領域
-		const area = new g.Sprite({
-			scene: scene,
-			src: imgArea,
-		});
-		scene.append(area);
+		// // ボタン等表示領域
+		// const area = new g.Sprite({
+		// 	scene: scene,
+		// 	src: imgArea,
+		// });
+		// scene.append(area);
 
 		// 画面をタッチしたとき、SEを鳴らします
 		scene.onPointDownCapture.add(() => {
@@ -239,6 +191,17 @@ export function debugLog(...a: any[]): void {
 	console.log(a);
 }
 
+// export function swap<T>(src: T, dst: T): void {
+// 	debugLog("swap_in");
+// 	// 分割代入 ES6から AkashicEngineはES5
+// 	// https://qiita.com/sosukesuzuki/items/564cbf9ac717eb1b38db コメントから
+// 	// src = [dst, dst = src][0];
+// 	debugLog(`src=${src}, dst=${dst}`);
+// 	const tmp: T = src;
+// 	src = dst;
+// 	dst = tmp;
+// 	debugLog(`src=${src}, dst=${dst}`);
+// }
 // function blockMove(blk: g.FrameSprite[][], x: number, y: number, dir: typeBlockMoveDir): void {
 // 	let dx: number = 0;
 // 	let dy: number = 0;
