@@ -25,6 +25,7 @@ enum BlockType {
 	white = 5,
 	colors = 5,
 	all = 6,
+	some = -1,
 };
 
 /**
@@ -80,6 +81,7 @@ export class Block {
 	private entBlock: g.FrameSprite[];
 	// ブロックタイプ配列(ブロックのframeIndex)
 	private arrBlock: BlockType[];
+	private arrErase: BlockType[];
 	// ランダムクラス
 	private rnd: Random;
 	// フラグ類
@@ -98,6 +100,7 @@ export class Block {
 		// ブロックタイプ配列の設定
 		this.rnd = new Random(G_GAME_PARAMETER.random);
 		this.arrBlock = new Array<BlockType>(this.ARRAY_SIZE);
+		this.arrErase = new Array<BlockType>(this.NUM_X * this.NUM_Y);
 		// エンティティの設定
 		this.TOP = 120;
 		this.LEFT = (g.game.height - (this.TOP + this.imgBack.height)) * ASPECT_RATIO;
@@ -196,13 +199,16 @@ export class Block {
 	}
 
 	private addOnPointMoveEvent(idx: number): void {
+		const clickEnt: g.FrameSprite = this.entBlock[idx];
 		// debugLog("addOnPointMoveEvent_in");
-		this.entBlock[idx].onPointMove.add((ev) => {
-			// debugLog(`entBlock.onPointMove_in idx=${idx}`);
-			if (!this.isSwapping && this.entBlock[idx].frameNumber != 0) {
+		clickEnt.onPointMove.add((ev) => {
+			debugLog(`entBlock.onPointMove_in idx=${idx}`);
+			debugLog(`isSwapping=${this.isSwapping}, no=${clickEnt.frameNumber}`);
+			if (!this.isSwapping && clickEnt.frameNumber != BlockType.none) {
 				// 操作
 				this.inputBlock(ev, idx);
 			}
+			debugLog("entBlock.onPointMove_out");
 		});
 	};
 
@@ -255,9 +261,11 @@ export class Block {
 			// 	}, 300);
 			// }
 		}
+		debugLog("inputBlock_out");
 	}
 
 	private blockMove(idx: number, dir: BlockMoveDir): void {
+		debugLog(`blockMove_in idx=${idx}, dir=${dir}`);
 		let di: number = 0;
 		switch (dir) {
 			case BlockMoveDir.right:
@@ -276,7 +284,12 @@ export class Block {
 				debugLog(`${dir}の方向には動かせません`);
 				return;
 		}
+		debugLog("di=" + di);
 		if (di) {
+			if (this.entBlock[idx + di].frameNumber == BlockType.none) {
+				this.isSwapping = false;
+				return;
+			}
 			const srcEnt: g.FrameSprite = this.entBlock[idx];
 			const dstEnt: g.FrameSprite = this.entBlock[idx + di];
 			const target: Target = {
@@ -289,6 +302,7 @@ export class Block {
 			this.createSwapAnime(idx + di, idx);
 			[this.arrBlock[idx], this.arrBlock[idx + di]] = [this.arrBlock[idx + di], this.arrBlock[idx]];
 		}
+		debugLog("blockMove_out");
 	}
 
 	private createSwapAnime(sIdx: number, dIdx: number, isSrc: boolean = false): void {
@@ -325,10 +339,115 @@ export class Block {
 				if (isSrc) {
 					debugLog(this.arrBlock);
 					// 消す処理
-					if (this.checkEraseBlcock(sIdx, dIdx)) {
+					if (this.checkEraseBlock(sIdx, dIdx)) {
+						// test
+						for (let i = 0; i < this.arrErase.length; i++) {
+							if (this.arrErase[i]) {
+								this.arrBlock[i] = BlockType.none;
+								this.entBlock[i].frameNumber = BlockType.none;
+								this.entBlock[i].modified();
+							}
+						}
 					}
 				}
 			});
+	}
+
+	private checkEraseBlock(sIdx: number, dIdx: number): boolean {
+		debugLog("checkErase_in");
+		let retBool: boolean = false;
+		// 消去配列の初期化
+		for (let i = 0; i < this.arrErase.length; i++) {
+			this.arrErase[i] = 0;
+		}
+		// クリック元とクリック先の位置関係を調べる
+		const dif: number = Math.abs(dIdx - sIdx);
+		debugLog("dif=" + dif);
+		if (dif == 1 || dif == 8) {
+			// 論理和の左式と右式を入れ替えてはダメ
+			// 短絡評価で関数が評価されない場合がある
+			retBool = this.checkEraseBlockCol(sIdx) || retBool;
+			retBool = this.checkEraseBlockRow(sIdx) || retBool;
+			retBool = this.checkEraseBlockCol(dIdx) || retBool;
+			retBool = this.checkEraseBlockRow(dIdx) || retBool;
+			debugLog("arrErase=" + this.arrErase);
+		} else {	// ？？？？
+			return false;
+		}
+		debugLog("checkErase_out retBool=" + retBool);
+		return retBool;
+	}
+
+	private checkEraseBlockCol(idx: number): boolean {
+		debugLog("checkEraseBlockCol_in idx=" + idx);
+		const color: BlockType = this.arrBlock[idx];
+		if (color <= BlockType.none) return false;
+		if (color <= BlockType.colors) {
+			let erasePlus: number = idx;
+			let eraseMinus: number = idx;
+			let canPlus: boolean = true;
+			let canMinus: boolean = true;
+			for (let i = 1; i < this.NUM_Y; i++) {
+				const pls: number = idx + this.NUM_X * i;
+				const min: number = idx - this.NUM_X * i;
+				if (canPlus && pls < this.NUM_X * this.NUM_Y && this.arrBlock[pls] == color) {
+					erasePlus += this.NUM_X;
+				} else {
+					canPlus = false;
+				}
+				if (canMinus && min >= 0 && this.arrBlock[min] == color) {
+					eraseMinus -= this.NUM_X;
+				} else {
+					canMinus = false;
+				}
+				if (!(canPlus || canMinus)) break;
+			}
+			if (Math.floor((erasePlus - eraseMinus) / this.NUM_X) >= 2) {
+				for (let i = eraseMinus; i <= erasePlus; i += this.NUM_X) {
+					this.arrErase[i] = BlockType.some;
+				}
+				debugLog("checkEraseBlockCol_out true");
+				return true;
+			}
+		}
+		debugLog("checkEraseBlockCol_out false");
+		return false;
+	}
+
+	private checkEraseBlockRow(idx: number): boolean {
+		debugLog("checkEraseBlockRow_in idx=" + idx);
+		const color: BlockType = this.arrBlock[idx];
+		if (color <= BlockType.none) return false;
+		if (color <= BlockType.colors) {
+			let erasePlus: number = idx;
+			let eraseMinus: number = idx;
+			let canPlus: boolean = true;
+			let canMinus: boolean = true;
+			for (let i = 1; i < this.NUM_X; i++) {
+				const pls: number = idx + i;
+				const min: number = idx - i;
+				if (canPlus && pls % this.NUM_X > idx % this.NUM_X && this.arrBlock[pls] == color) {
+					erasePlus++;
+				} else {
+					canPlus = false;
+				}
+				if (canMinus && min % this.NUM_X < idx % this.NUM_X && this.arrBlock[min] == color) {
+					eraseMinus--;
+				} else {
+					canMinus = false;
+				}
+				if (!(canPlus || canMinus)) break;
+			}
+			if (erasePlus - eraseMinus >= 2) {
+				for (let i = eraseMinus; i <= erasePlus; i++) {
+					this.arrErase[i] = BlockType.some;
+				}
+				debugLog("checkEraseBlockRow_out true");
+				return true;
+			}
+		}
+		debugLog("checkEraseBlockRow_out false");
+		return false;
 	}
 
 	/**
