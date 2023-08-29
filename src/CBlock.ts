@@ -338,19 +338,73 @@ export class Block {
 				// クリックしたブロックだけの処理
 				if (isSrc) {
 					debugLog(this.arrBlock);
-					// 消す処理
+					// 消す＆落下処理
 					if (this.checkEraseBlock(sIdx, dIdx)) {
-						// test
-						for (let i = 0; i < this.arrErase.length; i++) {
-							if (this.arrErase[i]) {
-								this.arrBlock[i] = BlockType.none;
-								this.entBlock[i].frameNumber = BlockType.none;
-								this.entBlock[i].modified();
-							}
-						}
+						// 消す処理
+						this.eraseBlock();
+						// 落とす処理
+						this.fallBlock();
 					}
 				}
 			});
+	}
+
+	private eraseBlock(): void {
+		// test
+		for (let i = 0; i < this.arrErase.length; i++) {
+			if (this.arrErase[i]) {
+				this.arrBlock[i] = BlockType.none;
+				this.entBlock[i].frameNumber = BlockType.none;
+				this.entBlock[i].modified();
+			}
+		}
+	}
+
+	private fallBlock(): void {
+		for (let x = 0; x < this.NUM_X; x++) {
+			const arrMoveTo: number[] = this.fallBlockCol(x);
+			debugLog(`x=${x}, arrMoveTo=${arrMoveTo}`);
+			if (x === 0) {
+				for (let y = 0; y < arrMoveTo.length; y++) {
+					if (arrMoveTo[y] != -1 && arrMoveTo[y] != y) {
+						const srcIdx: number = x + this.NUM_X * y;
+						const dstIdx: number = x + this.NUM_X * arrMoveTo[y];
+						// 配列の移動
+						this.arrBlock[dstIdx] = this.arrBlock[srcIdx]
+						this.arrBlock[srcIdx] = 0;
+						// エンティティの移動
+						this.entBlock[dstIdx].frameNumber = this.entBlock[srcIdx].frameNumber;
+						this.entBlock[srcIdx].frameNumber = 0;
+						this.entBlock[dstIdx].modified();
+					}
+				}
+				debugLog("落とした後");
+				const tmp: BlockType[] = this.arrBlock;
+				debugLog(tmp[this.NUM_X * 0], tmp[this.NUM_X * 1], tmp[this.NUM_X * 2], tmp[this.NUM_X * 3], tmp[this.NUM_X * 4], tmp[this.NUM_X * 5], tmp[this.NUM_X * 6], tmp[this.NUM_X * 7], tmp[this.NUM_X * 8]);
+			}
+		}
+	}
+
+	// ex. [0,0,0,0,0,0,0] => [-1,-1,-1,-1,-1,-1,-1,-1,0,1,2,3...]
+	// ex. [1,1,1,1,1,1,1] => [0,1,2,3,4,5,6,7,8,9...]
+	// ex. [0,1,1,0,0,0,1] => [-1,0,1,-1,-1,-1,2,3,4,5,6...]
+	private fallBlockCol(x: number): number[] {
+		// debugLog(`fallBlockCol_in x=${x}`);
+		let arrMoveTo: number[] = new Array<number>(this.NUM_Y * 2);
+		for (let i = 0; i < arrMoveTo.length; i++) {
+			arrMoveTo[i] = -1;
+		}
+		let moveTo: number = 0;
+		for (let y = 0; y < this.NUM_Y * 2; y++) {
+			const idx: number = x + this.NUM_X * y;
+			// debugLog(`y=${y}, idx=${idx}`);
+			if (this.arrBlock[idx] != BlockType.none) {
+				arrMoveTo[y] = moveTo;
+				moveTo++;
+			}
+		}
+		// debugLog("fallBlockCol_out");
+		return arrMoveTo;
 	}
 
 	private checkEraseBlock(sIdx: number, dIdx: number): boolean {
