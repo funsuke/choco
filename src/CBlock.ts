@@ -117,7 +117,7 @@ export class Block {
 		});
 		this.entBlock = new Array<g.FrameSprite>(this.ARRAY_SIZE);
 		// ブロック配列の設定
-		this.initArray();
+		this.initArrayBlock();
 	}
 
 	private getX(idx: number): number {
@@ -131,7 +131,7 @@ export class Block {
 	/**
 	 * 数値配列の初期化
 	 */
-	private initArray(): void {
+	private initArrayBlock(): void {
 		// ３つ繋がらないようにランダム値で初期化
 		for (let i = 0; i < this.ARRAY_SIZE; i++) {
 			const x: number = this.getX(i);
@@ -146,10 +146,18 @@ export class Block {
 			if (x >= 2) {
 				left1 = this.arrBlock[i - dx];
 				left2 = this.arrBlock[i - dx * 2];
+				// left1 = this.getEntBlock(i - dx);
+				// left2 = this.getEntBlock(i - dx * 2);
 			}
-			if (y < this.ARRAY_NUM_Y - 2) {
+			// if (y < this.ARRAY_NUM_Y - 2) {
+			// 	down1 = this.arrBlock[i - dy];
+			// 	down2 = this.arrBlock[i - dy * 2];
+			// }
+			if (y >= 2) {
 				down1 = this.arrBlock[i - dy];
 				down2 = this.arrBlock[i - dy * 2];
+				// down1 = this.getEntBlock(i - dy);
+				// down2 = this.getEntBlock(i - dy * 2);
 			}
 			// 新規ブロックの設定
 			let newBlock: BlockType = this.getRandomBlock();
@@ -161,14 +169,25 @@ export class Block {
 				}
 			}
 			this.arrBlock[i] = newBlock;
+			// this.setEntBlock(i, newBlock);
 		}
+	}
+
+	private getEntBlock(idx: number): number {
+		return this.entBlock[idx].frameNumber;
+	}
+
+	private setEntBlock(idx: number, no: number): void {
+		this.entBlock[idx].frameNumber = no;
 	}
 
 	public appendBlock(scene: g.Scene): void {
 		debugLog("setBlockEntity_in");
 		// ブロックの表示 yを降順で表示 0は一番下に表示
-		for (let i = 0; i < this.NUM_X * (this.NUM_Y + 1); i++) {
-			const idx: number = this.NUM_X * (this.NUM_Y - this.getY(i)) + this.getX(i);
+		// for (let i = 0; i < this.NUM_X * (this.NUM_Y + 1); i++) {
+		for (let i = 0; i < this.ARRAY_SIZE; i++) {
+			// const idx: number = this.NUM_X * (this.NUM_Y - this.getY(i)) + this.getX(i);
+			const idx: number = this.ARRAY_SIZE - this.NUM_X * (this.getY(i) + 1) + this.getX(i);
 			debugLog("idx=" + idx);
 			this.entBlock[idx] = this.createBlock(scene, idx);
 			this.addOnPointMoveEvent(idx);
@@ -180,6 +199,7 @@ export class Block {
 		this.entPane.y = this.TOP + 10;
 		this.entPane.invalidate();
 		scene.append(this.entPane);
+		debugLog("setBlockEntity_out");
 	}
 
 	private createBlock(scene: g.Scene, idx: number): g.FrameSprite {
@@ -195,7 +215,7 @@ export class Block {
 			x: this.MARGIN_LT * x - 8,
 			y: this.MARGIN_TP * y - 4,
 			touchable: true,
-		})
+		});
 	}
 
 	private addOnPointMoveEvent(idx: number): void {
@@ -290,14 +310,6 @@ export class Block {
 				this.isSwapping = false;
 				return;
 			}
-			const srcEnt: g.FrameSprite = this.entBlock[idx];
-			const dstEnt: g.FrameSprite = this.entBlock[idx + di];
-			const target: Target = {
-				x: srcEnt.x, y: srcEnt.y, no: this.entBlock[idx].frameNumber
-			};
-			const dstTarget: Target = {
-				x: dstEnt.x, y: dstEnt.y, no: this.entBlock[idx + di].frameNumber
-			};
 			this.createSwapAnime(idx, idx + di, true);
 			this.createSwapAnime(idx + di, idx);
 			[this.arrBlock[idx], this.arrBlock[idx + di]] = [this.arrBlock[idx + di], this.arrBlock[idx]];
@@ -339,6 +351,7 @@ export class Block {
 				if (isSrc) {
 					debugLog(this.arrBlock);
 					// 消す＆落下処理
+					this.initArrayErase();
 					if (this.checkEraseBlock(sIdx, dIdx)) {
 						// 消す処理
 						this.eraseBlock();
@@ -364,23 +377,36 @@ export class Block {
 		for (let x = 0; x < this.NUM_X; x++) {
 			const arrMoveTo: number[] = this.fallBlockCol(x);
 			debugLog(`x=${x}, arrMoveTo=${arrMoveTo}`);
-			if (x === 0) {
-				for (let y = 0; y < arrMoveTo.length; y++) {
-					if (arrMoveTo[y] != -1 && arrMoveTo[y] != y) {
-						const srcIdx: number = x + this.NUM_X * y;
-						const dstIdx: number = x + this.NUM_X * arrMoveTo[y];
-						// 配列の移動
-						this.arrBlock[dstIdx] = this.arrBlock[srcIdx]
-						this.arrBlock[srcIdx] = 0;
-						// エンティティの移動
-						this.entBlock[dstIdx].frameNumber = this.entBlock[srcIdx].frameNumber;
-						this.entBlock[srcIdx].frameNumber = 0;
-						this.entBlock[dstIdx].modified();
-					}
+			let cntFallBlocks: number = 0;
+			for (let y = 0; y < arrMoveTo.length; y++) {
+				if (arrMoveTo[y] != -1 && arrMoveTo[y] != y) {
+					cntFallBlocks++;
+					const srcIdx: number = x + this.NUM_X * y;
+					const dstIdx: number = x + this.NUM_X * arrMoveTo[y];
+					// 配列の移動
+					this.arrBlock[dstIdx] = this.arrBlock[srcIdx]
+					this.arrBlock[srcIdx] = 0;
+					// エンティティの移動
+					this.entBlock[dstIdx].frameNumber = this.entBlock[srcIdx].frameNumber;
+					this.entBlock[srcIdx].frameNumber = 0;
+					const targetY: number = this.entBlock[dstIdx].y;
+					this.entBlock[dstIdx].y = this.entBlock[srcIdx].y;
+					this.entBlock[dstIdx].modified();
+
+					const tl = new Timeline(this.scene);
+					tl.create(this.entBlock[dstIdx])
+						.moveY(targetY, 300, Easing.easeInCubic);
 				}
-				debugLog("落とした後");
-				const tmp: BlockType[] = this.arrBlock;
-				debugLog(tmp[this.NUM_X * 0], tmp[this.NUM_X * 1], tmp[this.NUM_X * 2], tmp[this.NUM_X * 3], tmp[this.NUM_X * 4], tmp[this.NUM_X * 5], tmp[this.NUM_X * 6], tmp[this.NUM_X * 7], tmp[this.NUM_X * 8]);
+			}
+			// debugLog("落とした後");
+			// const tmp: BlockType[] = this.arrBlock;
+			// debugLog(tmp[this.NUM_X * 0], tmp[this.NUM_X * 1], tmp[this.NUM_X * 2], tmp[this.NUM_X * 3], tmp[this.NUM_X * 4], tmp[this.NUM_X * 5], tmp[this.NUM_X * 6], tmp[this.NUM_X * 7], tmp[this.NUM_X * 8]);
+			const topIdx: number = this.ARRAY_SIZE - this.NUM_X + x;
+			for (let i = 0; i < cntFallBlocks; i++) {
+				const idx: number = topIdx - this.NUM_X * i;
+				this.arrBlock[idx] = this.getRandomBlock();
+				this.entBlock[idx].frameNumber = this.arrBlock[idx];
+				this.entBlock[idx].modified();
 			}
 		}
 	}
@@ -407,13 +433,15 @@ export class Block {
 		return arrMoveTo;
 	}
 
-	private checkEraseBlock(sIdx: number, dIdx: number): boolean {
-		debugLog("checkErase_in");
-		let retBool: boolean = false;
-		// 消去配列の初期化
+	private initArrayErase(): void {
 		for (let i = 0; i < this.arrErase.length; i++) {
 			this.arrErase[i] = 0;
 		}
+	}
+
+	private checkEraseBlock(sIdx: number, dIdx: number): boolean {
+		debugLog("checkErase_in");
+		let retBool: boolean = false;
 		// クリック元とクリック先の位置関係を調べる
 		const dif: number = Math.abs(dIdx - sIdx);
 		debugLog("dif=" + dif);
@@ -502,6 +530,29 @@ export class Block {
 		}
 		debugLog("checkEraseBlockRow_out false");
 		return false;
+	}
+
+	private checkEraseBlockLine(idx: number, isCol: boolean) {
+		debugLog(`checkEraseBlockLine_in idx=${idx}, isCol=${isCol}`);
+		const color: BlockType = this.arrBlock[idx];
+		if (color <= BlockType.none || color > BlockType.colors) {
+			return false;
+		}
+		//
+		let erasePlus: number = idx;
+		let eraseMinus: number = idx;
+		let canPlus: boolean = true;
+		let canMinus: boolean = true;
+		let loopLimit: number = this.NUM_X;
+		let deltaIdx: number = 1;
+		if (isCol) {
+			loopLimit = this.NUM_Y;
+			deltaIdx = this.NUM_X;
+		}
+		for (let i = 1; i < loopLimit; i++) {
+			const pls: number = idx + deltaIdx * i;
+			const
+		}
 	}
 
 	/**

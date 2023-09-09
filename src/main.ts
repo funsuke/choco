@@ -128,12 +128,12 @@ export function main(param: GameMainParameterObject): void {
 		});
 		scene.append(timeLabel);
 
-		// // ボタン等表示領域
-		// const area = new g.Sprite({
-		// 	scene: scene,
-		// 	src: imgArea,
-		// });
-		// scene.append(area);
+		// ボタン等表示領域
+		const area = new g.Sprite({
+			scene: scene,
+			src: imgArea,
+		});
+		scene.append(area);
 
 		// 画面をタッチしたとき、SEを鳴らします
 		scene.onPointDownCapture.add(() => {
