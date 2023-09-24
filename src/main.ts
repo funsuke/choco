@@ -25,6 +25,7 @@
 // 　　カラｘカラ　　　　　全て削除
 
 import { Block } from "./CBlock";
+import { debugLog } from "./debug";
 import { GameMainParameterObject } from "./parameterObject";
 
 // グローバルゲームパラメータ
@@ -181,14 +182,6 @@ export function main(param: GameMainParameterObject): void {
 		// ここまでゲーム内容を記述します
 	});
 	g.game.pushScene(scene);
-}
-
-/**
- * デバッグ表示(コンソール)
- * @param a 表示するパラメータ
- */
-export function debugLog(...a: any[]): void {
-	console.log(a);
 }
 
 // export function swap<T>(src: T, dst: T): void {

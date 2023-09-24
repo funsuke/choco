@@ -58,6 +58,11 @@
 			"path": "image/blk_back.png",
 			"width": 692,
 			"height": 559
+		},
+		"debug": {
+			"type": "script",
+			"path": "script/debug.js",
+			"global": true
 		}
 	},
 	"moduleMainScripts": {
